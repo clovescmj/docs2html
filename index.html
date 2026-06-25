@@ -48,7 +48,6 @@
     button:hover { background-color: #0056b3; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
     
-    /* Estilo do Loading */
     .loading-box { display: none; margin-top: 15px; color: #555; font-size: 14px; }
     .spinner {
       border: 4px solid #f3f3f3;
@@ -91,21 +90,20 @@
       return;
     }
     
-    // Ativa animação de loading e trava o botão para evitar cliques duplos
     btn.disabled = true;
     loading.style.display = "block";
     
-    // IMPORTANTE: Substitua o link abaixo pela URL oficial gerada na sua "Nova Implantação" do Google Apps Script
+    // IMPORTANTE: Insira aqui a sua URL do Apps Script terminando em /exec
     var urlScriptGoogle = "https://google.com";
     
-    // Faz a comunicação externa via POST enviando a URL do documento
+    // Realiza a requisição externa configurada com 'redirect: "follow"' para evitar problemas de CORS
     fetch(urlScriptGoogle, {
       method: "POST",
+      redirect: "follow",
       body: JSON.stringify({ url: url })
     })
     .then(response => response.json())
     .then(resultado => {
-      // Restaura o botão e remove o loading da tela
       btn.disabled = false;
       loading.style.display = "none";
       
@@ -114,7 +112,7 @@
         return;
       }
       
-      // GATILHO DE DOWNLOAD AUTOMÁTICO DO ARQUIVO HTML PURO
+      // Executa o download automático em lote
       var elementoDownload = document.createElement('a');
       elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
       elementoDownload.setAttribute('download', resultado.nomeArquivo);
