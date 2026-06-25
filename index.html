@@ -1,133 +1,134 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Gerador de HTML Puro</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-      width: 100%;
-      max-width: 480px;
-      text-align: center;
-    }
-    h2 { color: #333; margin-top: 0; font-weight: 600; }
-    p { color: #666; font-size: 14px; margin-bottom: 20px; }
-    input[type="text"] {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 20px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover { background-color: #0056b3; }
-    button:disabled { background-color: #ccc; cursor: not-allowed; }
-    
-    .loading-box { display: none; margin-top: 15px; color: #555; font-size: 14px; }
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #007bff;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: spin 1s linear infinite;
-      margin: 10px auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
+// 1. CARREGAMENTO NATIVO (Se acessado pelo link direto do Google)
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+                    .setTitle('Gerador de HTML Puro')
+                    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
 
-<div class="container">
-  <h2>Gerador de HTML Puro</h2>
-  <p>Insira a URL do seu Google Doc para baixar o HTML limpo.</p>
-  
-  <input type="text" id="urlInput" placeholder="https://google.com" required>
-  <button id="btnGerar" onclick="processarDocumento()">Gerar HTML</button>
-  
-  <div id="loading" class="loading-box">
-    <div class="spinner"></div>
-    <span>Processando documento, aguarde...</span>
-  </div>
-</div>
-
-<script>
-  function processarDocumento() {
-    var url = document.getElementById("urlInput").value.trim();
-    var btn = document.getElementById("btnGerar");
-    var loading = document.getElementById("loading");
+// 2. INTEGRAÇÃO EXTERNA (Recebe requisições sem erro do GitHub Pages)
+function doPost(e) {
+  try {
+    // Lê os dados como texto bruto e converte para JSON de forma segura
+    var dadosRecebidos = JSON.parse(e.postData.contents);
+    var urlDoc = dadosRecebidos.url;
     
-    if (!url) {
-      alert("Por favor, cole uma URL válida do Google Docs.");
-      return;
-    }
+    var resultado = executarGeracaoWeb(urlDoc);
     
-    btn.disabled = true;
-    loading.style.display = "block";
-    
-    // IMPORTANTE: Insira aqui a sua URL do Apps Script terminando em /exec
-    var urlScriptGoogle = "https://google.com";
-    
-    // Realiza a requisição externa configurada com 'redirect: "follow"' para evitar problemas de CORS
-    fetch(urlScriptGoogle, {
-      method: "POST",
-      redirect: "follow",
-      body: JSON.stringify({ url: url })
-    })
-    .then(response => response.json())
-    .then(resultado => {
-      btn.disabled = false;
-      loading.style.display = "none";
-      
-      if (resultado.erro) {
-        alert("Erro ao processar documento: " + resultado.erro);
-        return;
-      }
-      
-      // Executa o download automático em lote
-      var elementoDownload = document.createElement('a');
-      elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
-      elementoDownload.setAttribute('download', resultado.nomeArquivo);
-      elementoDownload.style.display = 'none';
-      document.body.appendChild(elementoDownload);
-      elementoDownload.click();
-      document.body.removeChild(elementoDownload);
-    })
-    .catch(err => {
-      btn.disabled = false;
-      loading.style.display = "none";
-      alert("Falha na comunicação com o servidor: " + err.message);
-    });
+    // Retorna a resposta estruturada em formato texto/json limpo
+    return ContentService.createTextOutput(JSON.stringify(resultado))
+                         .setMimeType(ContentService.MimeType.JSON);
+                         
+  } catch (erro) {
+    return ContentService.createTextOutput(JSON.stringify({ erro: erro.toString() }))
+                         .setMimeType(ContentService.MimeType.JSON);
   }
-</script>
+}
 
-</body>
-</html>
+// 3. MOTOR DE GERAÇÃO (Abre o Doc e monta a estrutura do HTML)
+function executarGeracaoWeb(urlDoc) {
+  try {
+    var doc = DocumentApp.openByUrl(urlDoc);
+    var body = doc.getBody();
+    var numElementos = body.getNumChildren();
+    
+    // Inicia a casca básica e limpa do documento HTML
+    var htmlResultado = "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n";
+    htmlResultado += "  <meta charset=\"UTF-8\">\n";
+    htmlResultado += "  <title>" + doc.getName() + "</title>\n";
+    htmlResultado += "</head>\n<body>\n";
+    
+    var emLista = false;
+
+    // Processa elemento por elemento
+    for (var i = 0; i < numElementos; i++) {
+      var elemento = body.getChild(i);
+      var tipo = elemento.getType();
+
+      // Gerencia listas (ul / li)
+      if (tipo == DocumentApp.ElementType.LIST_ITEM) {
+        if (!emLista) {
+          htmlResultado += "  <ul>\n";
+          emLista = true;
+        }
+        var textoLista = converterTextoParaHtmlPuro(elemento);
+        htmlResultado += "    <li>" + textoLista + "</li>\n";
+        continue;
+      } else {
+        if (emLista) {
+          htmlResultado += "  </ul>\n";
+          emLista = false;
+        }
+      }
+
+      // Processa Parágrafos comuns e Títulos h1, h2, h3
+      if (tipo == DocumentApp.ElementType.PARAGRAPH) {
+        var textoHtml = converterTextoParaHtmlPuro(elemento);
+        var heading = elemento.getHeading();
+        
+        if (textoHtml.trim() !== "") {
+          if (heading == DocumentApp.ParagraphHeading.HEADING1) {
+            htmlResultado += "  <h1>" + textoHtml + "</h1>\n";
+          } else if (heading == DocumentApp.ParagraphHeading.HEADING2) {
+            htmlResultado += "  <h2>" + textoHtml + "</h2>\n";
+          } else if (heading == DocumentApp.ParagraphHeading.HEADING3) {
+            htmlResultado += "  <h3>" + textoHtml + "</h3>\n";
+          } else {
+            htmlResultado += "  <p>" + textoHtml + "</p>\n";
+          }
+        }
+      }
+    }
+    
+    if (emLista) { htmlResultado += "  </ul>\n"; }
+    htmlResultado += "</body>\n</html>";
+
+    return {
+      html: htmlResultado,
+      nomeArquivo: doc.getName() + "_estruturado_limpo.html"
+    };
+    
+  } catch (erro) {
+    return { erro: erro.toString() };
+  }
+}
+
+// 4. TRADUTOR CARACTERE POR CARACTERE (Preserva formatações internas e links)
+function converterTextoParaHtmlPuro(elemento) {
+  var textObj = elemento.editAsText();
+  if (!textObj || textObj.getText().trim() == "") return "";
+  
+  var textoBruto = textObj.getText();
+  var resultado = "";
+  var emNegrito = false; var emItalico = false; var emSublinhado = false; var linkAtual = null;
+
+  for (var j = 0; j < textoBruto.length; j++) {
+    var jNegrito = textObj.isBold(j) === true;
+    var jItalico = textObj.isItalic(j) === true;
+    var jSublinhado = textObj.isUnderline(j) === true;
+    var jLink = textObj.getLinkUrl(j) || null;
+
+    if (linkAtual && jLink !== linkAtual) {
+      if (emSublinhado) { resultado += "</u>"; emSublinhado = false; }
+      if (emItalico) { resultado += "</em>"; emItalico = false; }
+      if (emNegrito) { resultado += "</strong>"; emNegrito = false; }
+      resultado += "</a>"; linkAtual = null;
+    }
+    if (emSublinhado && !jSublinhado) { resultado += "</u>"; emSublinhado = false; }
+    if (emItalico && !jItalico) { resultado += "</em>"; emItalico = false; }
+    if (emNegrito && !jNegrito) { resultado += "</strong>"; emNegrito = false; }
+
+    if (jLink && !linkAtual) { resultado += '<a href="' + jLink + '" target="_blank">'; linkAtual = jLink; }
+    if (jNegrito && !emNegrito) { resultado += "<strong>"; emNegrito = true; }
+    if (jItalico && !emItalico) { resultado += "<em>"; emItalico = true; }
+    if (jSublinhado && !emSublinhado) { resultado += "<u>"; emSublinhado = true; }
+
+    var caractere = textoBruto.charAt(j);
+    if (caractere == '<') resultado += '&lt;';
+    else if (caractere == '>') resultado += '&gt;';
+    else if (caractere == '&') resultado += '&amp;';
+    else resultado += caractere;
+  }
+
+  if (emSublinhado) resultado += "</u>"; if (emItalico) resultado += "</em>"; if (emNegrito) resultado += "</strong>"; if (linkAtual) descriptor += "</a>";
+  return resultado;
+}
