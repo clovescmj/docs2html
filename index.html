@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de HTML Puro</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+    }
+    h2 { color: #333; margin-top: 0; font-weight: 600; }
+    p { color: #666; font-size: 14px; margin-bottom: 20px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background-color: #0056b3; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    
+    /* Estilo do Loading */
+    .loading-box { display: none; margin-top: 15px; color: #555; font-size: 14px; }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin: 10px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Gerador de HTML Puro</h2>
+  <p>Insira a URL do seu Google Doc para baixar o HTML limpo.</p>
+  
+  <input type="text" id="urlInput" placeholder="https://google.com" required>
+  <button id="btnGerar" onclick="processarDocumento()">Gerar HTML</button>
+  
+  <div id="loading" class="loading-box">
+    <div class="spinner"></div>
+    <span>Processando documento, aguarde...</span>
+  </div>
+</div>
+
+<script>
+  function processarDocumento() {
+    var url = document.getElementById("urlInput").value.trim();
+    var btn = document.getElementById("btnGerar");
+    var loading = document.getElementById("loading");
+    
+    if (!url) {
+      alert("Por favor, cole uma URL válida do Google Docs.");
+      return;
+    }
+    
+    // Ativa animação de loading e trava o botão
+    btn.disabled = true;
+    loading.style.display = "block";
+    
+    // Chama a função do servidor enviando a URL digitada
+    google.script.run
+      .withSuccessHandler(function(resultado) {
+        // Desativa o loading
+        btn.disabled = false;
+        loading.style.display = "none";
+        
+        if (resultado.erro) {
+          alert("Erro: " + resultado.erro);
+          return;
+        }
+        
+        // GATILHO DE DOWNLOAD AUTOMÁTICO
+        var elementoDownload = document.createElement('a');
+        elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
+        elementoDownload.setAttribute('download', resultado.nomeArquivo);
+        elementoDownload.style.display = 'none';
+        document.body.appendChild(elementoDownload);
+        elementoDownload.click();
+        document.body.removeChild(elementoDownload);
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        loading.style.display = "none";
+        alert("Ocorreu uma falha na comunicação: " + err.message);
+      })
+      .executarGeracaoWeb(url); // Nome da nova função que criaremos no Code.gs
+  }
+</script>
+
+</body>
+</html>
