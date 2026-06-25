@@ -93,19 +93,16 @@
     btn.disabled = true;
     loading.style.display = "block";
     
-    // URL correta e direta do seu Google Apps Script unificado
+    // Link oficial do seu script ativo
     var urlScriptGoogle = "https://google.com";
     
-    // Altera o envio para simular o comportamento nativo de um formulário de texto simples
-    var formData = new URLSearchParams();
-    formData.append("url", url);
-    
+    // FIX DE CORS DEFINITIVO: Envia como 'text/plain' para o navegador ignorar o preflight (OPTIONS)
     fetch(urlScriptGoogle, {
       method: "POST",
-      body: formData, // Envia como parâmetro direto de formulário simples
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({ url: url })
     })
     .then(response => response.json())
     .then(resultado => {
@@ -117,7 +114,7 @@
         return;
       }
       
-      // Executa o download automático em lote
+      // Executa o download automático
       var elementoDownload = document.createElement('a');
       elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
       elementoDownload.setAttribute('download', resultado.nomeArquivo);
