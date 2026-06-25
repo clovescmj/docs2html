@@ -91,37 +91,43 @@
       return;
     }
     
-    // Ativa animação de loading e trava o botão
+    // Ativa animação de loading e trava o botão para evitar cliques duplos
     btn.disabled = true;
     loading.style.display = "block";
     
-    // Chama a função do servidor enviando a URL digitada
-    google.script.run
-      .withSuccessHandler(function(resultado) {
-        // Desativa o loading
-        btn.disabled = false;
-        loading.style.display = "none";
-        
-        if (resultado.erro) {
-          alert("Erro: " + resultado.erro);
-          return;
-        }
-        
-        // GATILHO DE DOWNLOAD AUTOMÁTICO
-        var elementoDownload = document.createElement('a');
-        elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
-        elementoDownload.setAttribute('download', resultado.nomeArquivo);
-        elementoDownload.style.display = 'none';
-        document.body.appendChild(elementoDownload);
-        elementoDownload.click();
-        document.body.removeChild(elementoDownload);
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        loading.style.display = "none";
-        alert("Ocorreu uma falha na comunicação: " + err.message);
-      })
-      .executarGeracaoWeb(url); // Nome da nova função que criaremos no Code.gs
+    // IMPORTANTE: Substitua o link abaixo pela URL oficial gerada na sua "Nova Implantação" do Google Apps Script
+    var urlScriptGoogle = "https://google.com";
+    
+    // Faz a comunicação externa via POST enviando a URL do documento
+    fetch(urlScriptGoogle, {
+      method: "POST",
+      body: JSON.stringify({ url: url })
+    })
+    .then(response => response.json())
+    .then(resultado => {
+      // Restaura o botão e remove o loading da tela
+      btn.disabled = false;
+      loading.style.display = "none";
+      
+      if (resultado.erro) {
+        alert("Erro ao processar documento: " + resultado.erro);
+        return;
+      }
+      
+      // GATILHO DE DOWNLOAD AUTOMÁTICO DO ARQUIVO HTML PURO
+      var elementoDownload = document.createElement('a');
+      elementoDownload.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(resultado.html));
+      elementoDownload.setAttribute('download', resultado.nomeArquivo);
+      elementoDownload.style.display = 'none';
+      document.body.appendChild(elementoDownload);
+      elementoDownload.click();
+      document.body.removeChild(elementoDownload);
+    })
+    .catch(err => {
+      btn.disabled = false;
+      loading.style.display = "none";
+      alert("Falha na comunicação com o servidor: " + err.message);
+    });
   }
 </script>
 
